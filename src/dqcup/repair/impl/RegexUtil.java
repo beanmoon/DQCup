@@ -45,7 +45,9 @@ public class RegexUtil {
 	}
 	
 	public static boolean isApmtValid(String value, String stadd){
-		if(stadd.startsWith("PO Box") && isStaddValid(stadd) && (value == "" || value == null))
+		// if(stadd.startsWith("PO Box") && isStaddValid(stadd) && (value == "" || value == null))
+		// if(stadd.startsWith("PO Box") && (value == null || value == "" ))
+		if(stadd.startsWith("PO Box"))
 			return true;
 		return apmtPattern.matcher(value).matches();
 	}
@@ -84,7 +86,7 @@ public class RegexUtil {
 		System.out.println(isFnameValid("Steve,.."));
 		System.out.println(isMinitValid("A"));
 		System.out.println(isStnumValid("", "PO Box sl"));
-		System.out.println(isStaddValid("PO Box 1235"));
+		System.out.println(isStaddValid("PO Box 4940"));
 		System.out.println(isCityValid("'ehll'  / - . "));
 	}
 }

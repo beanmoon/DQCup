@@ -1,76 +1,149 @@
 package dqcup.repair.test;
 
-import java.util.Set;
-
 import dqcup.repair.DatabaseRepair;
+import dqcup.repair.DbFileReader;
 import dqcup.repair.RepairedCell;
+import dqcup.repair.Tuple;
 import dqcup.repair.impl.DatabaseRepairImpl;
 
+import java.util.*;
+
 public class Test {
+    public static boolean debug = true;
 
-	/**
-	 * 
-	 * @param args
-	 * @throws Exception
-	 */
-	public static void main(String[] args) throws Exception {
-		long startTime = 0, endTime = 0, totalTime = 0;
-		double avgFindAccuracy = 0, avgRepairAccuracy = 0;
-		Set<RepairedCell> found, truth;
+    /**
+     * @param args
+     * @throws Exception
+     */
+    public static void main(String[] args) throws Exception {
+        long startTime = 0, endTime = 0, totalTime = 0;
+        double avgFindAccuracy = 0, avgRepairAccuracy = 0;
+        Set<RepairedCell> found, truth;
 
-		DatabaseRepair dr = new DatabaseRepairImpl();
-		truth = TestUtil.readTruth("input/Truth-easy.txt");
-		if (truth.size() != 0) {
-			startTime = System.currentTimeMillis();
-			found = dr.repair("input/DB-easy.txt");
-			endTime = System.currentTimeMillis();
+        DatabaseRepair dr = new DatabaseRepairImpl();
+        truth = TestUtil.readTruth("input/Truth-easy.txt");
+        if (truth.size() != 0) {
+            startTime = System.currentTimeMillis();
+            found = dr.repair("input/DB-easy.txt");
+            endTime = System.currentTimeMillis();
 
-			double findAccuracy = TestUtil.findAccuracy(truth, found);
-			double repairAccuracy = TestUtil.repairAccuracy(truth, found);
-			System.out.println("easy-Time:" + (endTime - startTime));
-			System.out.println("easy-Find Accuracy:" + findAccuracy);
-			System.out.println("easy-Repair Accuracy:" + repairAccuracy);
-			totalTime += (endTime - startTime);
-			avgFindAccuracy += findAccuracy;
-			avgRepairAccuracy += repairAccuracy;
-		}
+            double findAccuracy = TestUtil.findAccuracy(truth, found);
+            double repairAccuracy = TestUtil.repairAccuracy(truth, found);
+            System.out.println("easy-Time:" + (endTime - startTime));
+            System.out.println("easy-Find Accuracy:" + findAccuracy);
+            System.out.println("easy-Repair Accuracy:" + repairAccuracy);
+            totalTime += (endTime - startTime);
+            avgFindAccuracy += findAccuracy;
+            avgRepairAccuracy += repairAccuracy;
 
-		dr = new DatabaseRepairImpl();
-		truth = TestUtil.readTruth("input/Truth-normal.txt");
-		if (truth.size() != 0) {
-			startTime = System.currentTimeMillis();
-			found = dr.repair("input/DB-normal.txt");
-			endTime = System.currentTimeMillis();
+            if (debug) {
+                Set<RepairedCell> rest = TestUtil.getUnfound(truth, found);
+                System.out.println("There's still " + rest.size() + " instances not found!");
+                getPattern(rest);
+                Set<RepairedCell> falseSet = TestUtil.getFoundFalse(truth, found);
+                System.out.println("There's " + falseSet.size() + " instances wrongly found!");
+                for(RepairedCell cell: falseSet){
+                    System.out.println(cell);
+                }
 
-			double findAccuracy = TestUtil.findAccuracy(truth, found);
-			double repairAccuracy = TestUtil.repairAccuracy(truth, found);
-			System.out.println("normal-Time:" + (endTime - startTime));
-			System.out.println("normal-Find Accuracy:" + findAccuracy);
-			System.out.println("normal-Repair Accuracy:" + repairAccuracy);
-			totalTime += (endTime - startTime);
-			avgFindAccuracy += findAccuracy;
-			avgRepairAccuracy += repairAccuracy;
-		}
-		
-		dr = new DatabaseRepairImpl();
-		truth = TestUtil.readTruth("input/Truth-hard.txt");
-		if (truth.size() != 0) {
-			startTime = System.currentTimeMillis();
-			found = dr.repair("input/DB-hard.txt");
-			endTime = System.currentTimeMillis();
 
-			double findAccuracy = TestUtil.findAccuracy(truth, found);
-			double repairAccuracy = TestUtil.repairAccuracy(truth, found);
-			System.out.println("hard-Time:" + (endTime - startTime));
-			System.out.println("hard-Find Accuracy:" + findAccuracy);
-			System.out.println("hard-Repair Accuracy:" + repairAccuracy);
-			totalTime += (endTime - startTime);
-			avgFindAccuracy += findAccuracy;
-			avgRepairAccuracy += repairAccuracy;
-		}
-		
-		System.out.println("Total Time:"+totalTime);
-		System.out.println("Average Find Accuracy:"+avgFindAccuracy/3);
-		System.out.println("Average Repair Accuracy:"+avgRepairAccuracy/3);
-	}
+                Map<String, List<RepairedCell>> tmpMap = new HashMap<String, List<RepairedCell>>();
+                for(RepairedCell cell : found){
+                    String key = cell.getRowId() + cell.getColumnId();
+
+                    if(tmpMap.containsKey(key)){
+                        tmpMap.get(key).add(cell);
+                    }else{
+                        List<RepairedCell> tmpList = new ArrayList<RepairedCell>();
+                        tmpList.add(cell);
+                        tmpMap.put(key, tmpList);
+                    }
+                }
+
+                System.out.println("Duplicate: ");
+                for(String key : tmpMap.keySet()){
+                    if(tmpMap.get(key).size() > 1){
+                        for(RepairedCell cell : tmpMap.get(key)){
+                            System.out.println(cell);
+                        }
+                    }
+                }
+            }
+        }
+
+        dr = new DatabaseRepairImpl();
+        truth = TestUtil.readTruth("input/Truth-normal.txt");
+        if (truth.size() != 0) {
+            startTime = System.currentTimeMillis();
+            found = dr.repair("input/DB-normal.txt");
+            endTime = System.currentTimeMillis();
+
+            double findAccuracy = TestUtil.findAccuracy(truth, found);
+            double repairAccuracy = TestUtil.repairAccuracy(truth, found);
+            System.out.println("normal-Time:" + (endTime - startTime));
+            System.out.println("normal-Find Accuracy:" + findAccuracy);
+            System.out.println("normal-Repair Accuracy:" + repairAccuracy);
+            totalTime += (endTime - startTime);
+            avgFindAccuracy += findAccuracy;
+            avgRepairAccuracy += repairAccuracy;
+        }
+
+        dr = new DatabaseRepairImpl();
+        truth = TestUtil.readTruth("input/Truth-hard.txt");
+        if (truth.size() != 0) {
+            startTime = System.currentTimeMillis();
+            found = dr.repair("input/DB-hard.txt");
+            endTime = System.currentTimeMillis();
+
+            double findAccuracy = TestUtil.findAccuracy(truth, found);
+            double repairAccuracy = TestUtil.repairAccuracy(truth, found);
+            System.out.println("hard-Time:" + (endTime - startTime));
+            System.out.println("hard-Find Accuracy:" + findAccuracy);
+            System.out.println("hard-Repair Accuracy:" + repairAccuracy);
+            totalTime += (endTime - startTime);
+            avgFindAccuracy += findAccuracy;
+            avgRepairAccuracy += repairAccuracy;
+        }
+
+        System.out.println("Total Time:" + totalTime);
+        System.out.println("Average Find Accuracy:" + avgFindAccuracy / 3);
+        System.out.println("Average Repair Accuracy:" + avgRepairAccuracy / 3);
+    }
+
+
+    public static void getPattern(Set<RepairedCell> truth) {
+        LinkedList<Tuple> tuples = DbFileReader.readFile("input/DB-easy.txt");
+        Map<String, List<Tuple>> tupleMap = new HashMap<String, List<Tuple>>();
+        Map<Integer, String> idMap = new HashMap<Integer, String>();
+        for (Tuple tuple : tuples) {
+            int ruid = Integer.valueOf(tuple.getValue("RUID"));
+            String cuid = tuple.getValue("CUID");
+
+            idMap.put(ruid, cuid);
+
+            if (tupleMap.containsKey(cuid)) {
+                tupleMap.get(cuid).add(tuple);
+            } else {
+                List<Tuple> list = new ArrayList<Tuple>();
+                list.add(tuple);
+                tupleMap.put(cuid, list);
+            }
+        }
+
+        for (RepairedCell cell : truth) {
+            int ruid = cell.getRowId();
+            List<Tuple> tupleList = tupleMap.get(idMap.get(ruid));
+            System.out.println(cell.toString());
+            if (tupleList != null) {
+                for (Tuple tuple : tupleList) {
+                    System.out.println(tuple.toString(""));
+                }
+            }
+            System.out.println("----------------------------------------------------------------");
+
+        }
+
+        System.out.println(tupleMap.size());
+    }
+
 }

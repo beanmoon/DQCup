@@ -2,6 +2,8 @@ package dqcup.repair.impl;
 
 public class Index{
 	// RUID:CUID:SSN:FNAME:MINIT:LNAME:STNUM:STADD:APMT:CITY:STATE:ZIP
+
+	public static String[] attrs = "RUID:CUID:SSN:FNAME:MINIT:LNAME:STNUM:STADD:APMT:CITY:STATE:ZIP".split(":");
 	public static int RUID = 0;
 	public static int CUID = 1;
 	public static int SSN = 2;

@@ -1,13 +1,11 @@
 package dqcup.repair.impl;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import dqcup.repair.RepairedCell;
+import dqcup.repair.Tuple;
+
+import java.util.*;
 
 import static dqcup.repair.impl.Index.*;
-import dqcup.repair.Tuple;
 
 public class PersonalBag {	
 	private String cuid;
@@ -37,8 +35,8 @@ public class PersonalBag {
 		}		
 	}
 	
-	public List<String> repair(){
-		List<String> rst = new ArrayList<String>();
+	public Set<RepairedCell> repair(){
+		Set<RepairedCell> rst = new HashSet<RepairedCell>();
 		
 		for(int i = SSN; i <= ZIP; i++){
 			Map<String, ArrayList<String>> map = mapList.get(i);
@@ -63,7 +61,7 @@ public class PersonalBag {
 				if(!key.equals(maxKey)){
 					ArrayList<String> ruids = map.get(key);
 					for(String ruid: ruids){
-						rst.add(ruid + "," + attrs[i] + "," + maxKey);
+						rst.add(new RepairedCell(Integer.valueOf(ruid), attrs[i], maxKey));
 					}
 				}					
 			}			
@@ -71,11 +69,6 @@ public class PersonalBag {
 		
 		
 		return rst;
-	}
-	
-	
-	
-	public static void main(String[] args) {
 	}
 }
 

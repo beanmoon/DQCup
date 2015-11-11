@@ -1,22 +1,14 @@
 package dqcup.repair.impl;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
-import javax.swing.DebugGraphics;
-
 import dqcup.repair.DatabaseRepair;
 import dqcup.repair.DbFileReader;
 import dqcup.repair.RepairedCell;
 import dqcup.repair.Tuple;
 import dqcup.repair.test.TestUtil;
-import static dqcup.repair.impl.Index.*;
+
+import java.util.*;
+
+import static dqcup.repair.impl.Index.CUID;
 
 public class DatabaseRepairImpl implements DatabaseRepair {
 	private boolean debug = false;
@@ -26,14 +18,17 @@ public class DatabaseRepairImpl implements DatabaseRepair {
 		//Please implement your own repairing methods here.
 		LinkedList<Tuple> tuples = DbFileReader.readFile(fileRoute);
 		Map<String,PersonalBag> personalBagMap = new HashMap<String, PersonalBag>();
+		GlobalBag globalBag = new GlobalBag();
 		
 		for(Tuple tuple: tuples){
 			String cuid = tuple.getValue(CUID);
+			globalBag.ingest(tuple);
 			
 			if(personalBagMap.containsKey(cuid)){
 				personalBagMap.get(cuid).ingest(tuple);
 			}else{
 				PersonalBag personalBag = new PersonalBag(cuid);
+				personalBag.ingest(tuple);
 				personalBagMap.put(cuid, personalBag);
 			}
 		}
@@ -42,7 +37,10 @@ public class DatabaseRepairImpl implements DatabaseRepair {
 			System.out.println("tuples' size = " + tuples.size());
 			System.out.println("personalBagMap's size = " + personalBagMap.size());
 		}
-		List<String> rst = new ArrayList<String>();
+		
+		Set<RepairedCell> rst = new HashSet<RepairedCell>();
+		rst.addAll(globalBag.repair());
+
 		Iterator it = personalBagMap.entrySet().iterator();
 		while(it.hasNext()){
 			Map.Entry pair = (Map.Entry)it.next();
@@ -52,8 +50,8 @@ public class DatabaseRepairImpl implements DatabaseRepair {
 		
 		if(debug){
 			System.out.println("rst's size = " + rst.size());
-			for(String str : rst){
-				System.out.println(str);
+			for(RepairedCell cell: rst){
+				System.out.println(cell.toString());
 			}
 		}
 			
@@ -64,7 +62,7 @@ public class DatabaseRepairImpl implements DatabaseRepair {
 		
 		HashSet<RepairedCell> result = new HashSet<RepairedCell>();
 		
-		return result;
+		return rst;
 	}
 	
 	public void setDebug(boolean debug){
