@@ -47,7 +47,6 @@ public class RepairedCell {
 	}
 	
 	/**
-	 * @param value the repaired value to set
 	 */
 	public void setValue(String value) {
 		this.value = value;

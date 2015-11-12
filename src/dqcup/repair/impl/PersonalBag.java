@@ -7,7 +7,7 @@ import java.util.*;
 
 import static dqcup.repair.impl.Index.*;
 
-public class PersonalBag {	
+public class PersonalBag extends GenericBag{
 	private String cuid;
 	private static String[] attrs = "RUID:CUID:SSN:FNAME:MINIT:LNAME:STNUM:STADD:APMT:CITY:STATE:ZIP".split(":");
 	
@@ -40,6 +40,10 @@ public class PersonalBag {
 		
 		for(int i = SSN; i <= ZIP; i++){
 			Map<String, ArrayList<String>> map = mapList.get(i);
+
+			if(map.size() == 1)
+				continue;
+
 			Iterator it = map.entrySet().iterator();
 			
 			int max = 0;

@@ -10,23 +10,19 @@ public class GlobalBag {
     private ZipBag zipBag = new ZipBag();
     private StateBag stateBag = new StateBag();
     private ApmtBag apmtBag = new ApmtBag();
-    private Apmt2Bag apmt2Bag = new Apmt2Bag();
 
 
     public void ingest(Tuple tuple){
         zipBag.ingest(tuple);
         stateBag.ingest(tuple);
-        apmt2Bag.ingest(tuple);
         apmtBag.ingest(tuple);
     }
 
     public Set<RepairedCell> repair(){
         Set<RepairedCell> rst = new HashSet<RepairedCell>();
         rst.addAll(zipBag.repair());
-        Set<RepairedCell> stateRst = stateBag.repair();
         rst.addAll(stateBag.repair());
         rst.addAll(apmtBag.repair());
-        rst.addAll(apmt2Bag.repair());
 
         return rst;
     }
@@ -34,9 +30,11 @@ public class GlobalBag {
 
 
 
-class ZipBag {
+class ZipBag extends GenericBag {
 
-    private Map<String, HashMap<String, List<String>>> zipMap = new HashMap<String, HashMap<String, List<String>>>();
+    private Map<String, HashMap<String, List<String>>> nameMap = new HashMap<String, HashMap<String, List<String>>>();
+    private Map<String, HashMap<String, List<String>>> addrMap = new HashMap<String, HashMap<String, List<String>>>();
+
     List<Tuple> zipList = new ArrayList<Tuple>();
 
     public void ingest(Tuple tuple){
@@ -44,17 +42,21 @@ class ZipBag {
         String fname = tuple.getValue(FNAME);
         String minit = tuple.getValue(MINIT);
         String lname = tuple.getValue(LNAME);
+        String stnum = tuple.getValue(STNUM);
+        String stadd = tuple.getValue(STADD);
+        String city = tuple.getValue(CITY);
         String zip = tuple.getValue(ZIP);
 
         if(!RegexUtil.isZipValid(zip)){
             zipList.add(tuple);
         }
 
-        String key = fname+":"+minit+":"+lname;
+        String name = fname + minit + lname;
+        String addr = stnum + stadd + city;
 
         HashMap<String, List<String>> map = null;
-        if(zipMap.containsKey(key)){
-            map = zipMap.get(key);
+        if(nameMap.containsKey(name)){
+            map = nameMap.get(name);
             if(map.containsKey(zip)){
                 map.get(zip).add(ruid);
             }else{
@@ -67,17 +69,37 @@ class ZipBag {
             List<String> list = new ArrayList<String>();
             list.add(ruid);
             map.put(zip,list);
-            zipMap.put(key, map);
+            nameMap.put(name, map);
+        }
+
+        if(addrMap.containsKey(addr)){
+            map = addrMap.get(addr);
+            if(map.containsKey(zip)){
+                map.get(zip).add(ruid);
+            }else{
+                List<String> list = new ArrayList<String>();
+                list.add(ruid);
+                map.put(zip, list);
+            }
+        }else{
+            map = new HashMap<String, List<String>>();
+            List<String> list = new ArrayList<String>();
+            list.add(ruid);
+            map.put(zip,list);
+            addrMap.put(addr, map);
         }
     }
 
     public Set<RepairedCell> repair(){
 
         Set<RepairedCell> rst = new HashSet<RepairedCell>();
-        for(String name: zipMap.keySet()){
+        for(String name: nameMap.keySet()){
             int max = 0;
             String maxZip = null;
-            Map<String, List<String>> nameMap = zipMap.get(name);
+            Map<String, List<String>> nameMap = this.nameMap.get(name);
+
+            if(nameMap.size() == 1)
+                continue;
 
             for(String zipValue : nameMap.keySet()){
                 List<String> list = nameMap.get(zipValue);
@@ -98,28 +120,94 @@ class ZipBag {
             }
         }
 
+        for(String name: addrMap.keySet()){
+            int max = -1;
+            String maxZip = null;
+            Map<String, List<String>> zipMap = this.addrMap.get(name);
+
+            if(zipMap.size() == 1)
+                continue;
+
+            for(String zipValue : zipMap.keySet()){
+                List<String> list = zipMap.get(zipValue);
+                if(list.size() > max ){
+                    max = list.size();
+                    maxZip = zipValue;
+                }
+            }
+
+            for(String zipValue : zipMap.keySet()){
+                if(!zipValue.equals(maxZip)){
+                    List<String> ruids = zipMap.get(zipValue);
+                    for(String ruid : ruids){
+                        if(RegexUtil.isZipValid(maxZip)){
+                            RepairedCell c =new RepairedCell(Integer.valueOf(ruid), attrs[ZIP], maxZip);
+                            if(!isIn(c, rst))
+                                rst.add(c);
+                        }
+
+                    }
+                }
+            }
+        }
+
         for(Tuple tuple: zipList){
-            RepairedCell newCell = new RepairedCell(Integer.valueOf(tuple.getValue(RUID)), attrs[ZIP], tuple.getValue(ZIP));
-            if(!isIn(newCell, rst))
+            String ruid = tuple.getValue(RUID);
+            String fname = tuple.getValue(FNAME);
+            String minit = tuple.getValue(MINIT);
+            String lname = tuple.getValue(LNAME);
+            String stnum = tuple.getValue(STNUM);
+            String stadd = tuple.getValue(STADD);
+            String city = tuple.getValue(CITY);
+            String zip = tuple.getValue(ZIP);
+
+            String name = fname + minit + lname;
+            String addr = stnum + stadd + city;
+
+
+            RepairedCell newCell = new RepairedCell(Integer.valueOf(ruid), attrs[ZIP], zip);
+            if(!isIn(newCell, rst)){
+                Map<String, List<String>> map1 = nameMap.get(name);
+                Map<String, List<String>> map2 = addrMap.get(addr);
+
+                String rightZip = getRightZipValue(map1, map2);
+                newCell.setValue(rightZip);
                 rst.add(newCell);
+
+            }
+
         }
         return rst;
     }
 
-    public boolean isIn(RepairedCell cell, Set<RepairedCell> cells){
-        boolean in  = false;
-        for(RepairedCell c: cells){
-            if(cell.getRowId() == c.getRowId() && cell.getColumnId() == c.getColumnId()){
-                in = true;
-                break;
+    public String getRightZipValue(Map<String, List<String>> nameMap, Map<String, List<String>> addrMap){
+        Map<String, List<String>> newMap = new HashMap<String, List<String>>();
+
+        for(String zip: nameMap.keySet()){
+            if(RegexUtil.isZipValid(zip)){
+                newMap.put(zip, nameMap.get(zip));
+            }
+        }
+        for(String zip: addrMap.keySet()){
+            if(RegexUtil.isZipValid(zip)){
+                newMap.put(zip, addrMap.get(zip));
             }
         }
 
-        return  in;
+        String right = null;
+        int maxSize = 0;
+
+        for(String zip: newMap.keySet()){
+            if(newMap.get(zip).size() > maxSize){
+                maxSize = newMap.get(zip).size();
+                right = zip;
+            }
+        }
+        return right;
     }
 }
 
-class StateBag {
+class StateBag extends GenericBag {
     Map<String, Map<String, List<String>>> zipMap = new HashMap<String, Map<String, List<String>>>();
     List<Tuple> lowerLists = new ArrayList<Tuple>();
 
@@ -204,8 +292,9 @@ class StateBag {
 }
 
 
-class ApmtBag {
+class ApmtBag extends GenericBag {
     Map<String, Map<String, List<String>>> fnameMap = new HashMap<String, Map<String, List<String>>>();
+    Set<RepairedCell> set = new HashSet<RepairedCell>();
 
     public void ingest(Tuple tuple){
         String ruid = tuple.getValue(RUID);
@@ -232,10 +321,22 @@ class ApmtBag {
             apmtMap.put(apmt, list);
             fnameMap.put(fname, apmtMap);
         }
+
+        String stadd = new String(tuple.getValue(STADD));
+
+        if(!RegexUtil.isApmtValid(apmt, stadd)) {
+            if (!RegexUtil.isApmtValid(apmt, stadd)) {
+                String swapStr = swap(apmt);
+                if (!swapStr.equals(apmt))
+                    set.add(new RepairedCell(Integer.valueOf(ruid), attrs[APMT], swapStr));
+            }
+        }
     }
 
     public Set<RepairedCell> repair(){
         Set<RepairedCell> rst = new HashSet<RepairedCell>();
+        rst.addAll(set);
+
         for(String fname: fnameMap.keySet()){
             int max = -1;
             String maxApmt = null;
@@ -265,11 +366,6 @@ class ApmtBag {
         return rst;
     }
 
-}
-
-class Apmt2Bag {
-    public Set<RepairedCell> rst = new HashSet<RepairedCell>();
-
     public String swap(String str){
         char[] charArr = str.toCharArray();
         if(charArr.length == 0)
@@ -290,23 +386,5 @@ class Apmt2Bag {
         charArr[1] = Character.toLowerCase(charArr[1]);
 
         return String.copyValueOf(charArr);
-    }
-
-    public void ingest(Tuple tuple){
-        String ruid = tuple.getValue(RUID);
-        String apmt = new String(tuple.getValue(APMT));
-        String stadd = new String(tuple.getValue(STADD));
-
-        if(!RegexUtil.isApmtValid(apmt, stadd)) {
-            if (!RegexUtil.isApmtValid(apmt, stadd)) {
-                String swapStr = swap(apmt);
-                if (!swapStr.equals(apmt))
-                    rst.add(new RepairedCell(Integer.valueOf(ruid), attrs[APMT], swapStr));
-            }
-        }
-    }
-
-    public Set<RepairedCell> repair(){
-        return rst;
     }
 }

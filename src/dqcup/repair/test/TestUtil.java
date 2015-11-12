@@ -3,11 +3,11 @@ package dqcup.repair.test;
 import dqcup.repair.RepairedCell;
 
 import java.io.*;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 
 public class TestUtil {
+    private static boolean debug = false;
+
     public static Set<RepairedCell> readTruth(String fileRoute) {
         File file = new File(fileRoute);
         Set<RepairedCell> truth = new HashSet<RepairedCell>();
@@ -69,7 +69,9 @@ public class TestUtil {
                 }
             }
             double precision = tAndF * 1.0 / found.size(), recall = tAndF * 1.0 / truth.size();
-            System.out.println("find precision = " + precision + ", find recall = " + recall);
+            if(debug)
+                System.out.println("find precision = " + precision + ", find recall = " + recall);
+
             return 2 * precision * recall / (precision + recall);
         }
         return 0;
@@ -81,8 +83,9 @@ public class TestUtil {
             tAndF.addAll(truth);
             tAndF.retainAll(found);
             double precision = tAndF.size() * 1.0 / found.size(), recall = tAndF.size() * 1.0 / truth.size();
+            if(debug)
+                System.out.println("repair precision = " + precision + ", repair recall = " + recall);
 
-            System.out.println("repair precision = " + precision + ", repair recall = " + recall);
             return 2 * precision * recall / (precision + recall);
         }
         return 0;
@@ -134,6 +137,45 @@ public class TestUtil {
                     rst.add(cell);
                 }
             }
+        }
+        return rst;
+    }
+
+    public static Set<RepairedCell> getDuplicates(Set<RepairedCell> found){
+        Set<RepairedCell> rst = new HashSet<RepairedCell>();
+        Map<String, List<RepairedCell>> tmpMap = new HashMap<String, List<RepairedCell>>();
+
+        for (RepairedCell cell : found) {
+            String key = cell.getRowId() + cell.getColumnId();
+
+            if (tmpMap.containsKey(key)) {
+                tmpMap.get(key).add(cell);
+            } else {
+                List<RepairedCell> tmpList = new ArrayList<RepairedCell>();
+                tmpList.add(cell);
+                tmpMap.put(key, tmpList);
+            }
+        }
+
+        if (tmpMap.size() > 0) {
+            for (String key : tmpMap.keySet()) {
+                if (tmpMap.get(key).size() > 1) {
+                    for (RepairedCell cell : tmpMap.get(key)) {
+                        rst.add(cell);
+                    }
+                }
+            }
+        }
+
+        return  rst;
+    }
+
+
+    public static Set<RepairedCell> getRepairFalse(Set<RepairedCell> truth, Set<RepairedCell> found) {
+        Set<RepairedCell> rst = new HashSet<RepairedCell>();
+        if (found.size() != 0) {
+            rst.addAll(found);
+            rst.removeAll(truth);
         }
         return rst;
     }

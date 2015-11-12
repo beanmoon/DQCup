@@ -63,23 +63,7 @@ public class RegexUtil {
 	public static boolean isZipValid(String value){
 		return zipPattern.matcher(value).matches();
 	}
-	
-	public static boolean isValid(int index, String value){
-		switch (index) {
-		case 0:
-			
-			break;
 
-		default:
-			break;
-		}
-		
-		return false;
-	}
-	
-	
-	
-	
 	
 	public static void main(String[] args) {
 		System.out.println(isSsnValid("999999999"));

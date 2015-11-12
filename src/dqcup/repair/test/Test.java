@@ -38,34 +38,33 @@ public class Test {
 
             if (debug) {
                 Set<RepairedCell> rest = TestUtil.getUnfound(truth, found);
-                System.out.println("There's still " + rest.size() + " instances not found!");
-                getPattern(rest);
-                Set<RepairedCell> falseSet = TestUtil.getFoundFalse(truth, found);
-                System.out.println("There's " + falseSet.size() + " instances wrongly found!");
-                for(RepairedCell cell: falseSet){
-                    System.out.println(cell);
+                if (rest.size() > 0) {
+                    System.out.println("There's still " + rest.size() + " instances not found!");
+                    getPattern(rest);
                 }
 
 
-                Map<String, List<RepairedCell>> tmpMap = new HashMap<String, List<RepairedCell>>();
-                for(RepairedCell cell : found){
-                    String key = cell.getRowId() + cell.getColumnId();
-
-                    if(tmpMap.containsKey(key)){
-                        tmpMap.get(key).add(cell);
-                    }else{
-                        List<RepairedCell> tmpList = new ArrayList<RepairedCell>();
-                        tmpList.add(cell);
-                        tmpMap.put(key, tmpList);
+                Set<RepairedCell> foundFalseSet = TestUtil.getFoundFalse(truth, found);
+                if (foundFalseSet.size() > 0) {
+                    System.out.println("There's " + foundFalseSet.size() + " instances wrongly found!");
+                    for (RepairedCell cell : foundFalseSet) {
+                        System.out.println(cell);
                     }
                 }
 
-                System.out.println("Duplicate: ");
-                for(String key : tmpMap.keySet()){
-                    if(tmpMap.get(key).size() > 1){
-                        for(RepairedCell cell : tmpMap.get(key)){
-                            System.out.println(cell);
-                        }
+                Set<RepairedCell> duplicateSet = TestUtil.getDuplicates(found);
+                if (duplicateSet.size() > 0) {
+                    System.out.println("There's " + duplicateSet.size() + " duplicate instances!");
+                    for (RepairedCell cell : duplicateSet) {
+                        System.out.println(cell);
+                    }
+                }
+
+                Set<RepairedCell> repairFalseSet = TestUtil.getRepairFalse(truth, found);
+                if(repairFalseSet.size() > 0){
+                    System.out.println("There's " + repairFalseSet.size() + " instances wrongly repaired!");
+                    for(RepairedCell cell : repairFalseSet){
+                        System.out.println(cell);
                     }
                 }
             }
